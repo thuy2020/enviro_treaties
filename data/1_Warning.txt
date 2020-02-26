@@ -1,0 +1,14 @@
+
+DENIAL OF SERVICE ALERT
+
+A denial of service protection limit was exceeded. The file has been removed.
+Context: 'iea.zip\iea.dta'
+Reason: The data size limit was exceeded
+Limit: 10 MB
+Ticket Number : 0da8-5e3d-dd99-0001
+
+
+For further information, contact your system administrator. 
+Copyright 1999-2014 McAfee, Inc.
+All Rights Reserved.
+http://www.mcafee.com

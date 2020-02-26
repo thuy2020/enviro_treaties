@@ -1,0 +1,77 @@
+---
+title: "International Environmental Treaties"
+author: "Thuy Nguyen"
+date: "February 7, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rio)
+library(here)
+library(tidyverse)
+library(ggplot2)
+library(gghighlight)
+library(colorblindr)
+iea <- import(here("data", "iea_measonly.dta"))
+```
+
+```{r}
+
+iea %>% 
+  # mutate(subject_group = fct_reorder(subject_group, )) %>% 
+  ggplot(aes(subject_group, fill = subject_group))+
+           geom_bar(position = "dodge") +
+  facet_wrap(~agreement_type) +
+  coord_flip() +
+  guides(fill = FALSE) +
+  labs(
+    x = "Type of treaty group",
+    y = "Number of treaties",
+    title = "Type of environmental treaties by subjects"
+  )
+```
+
+
+``` {r}
+iea %>% 
+  select("tsig_yr", "subject_group", "region_continent") %>% 
+  arrange(tsig_yr) %>% 
+  group_by(subject_group) %>% 
+  ggplot(aes(region_continent, fill = subject_group)) +
+  geom_bar(position = "dodge") +
+  coord_flip() +
+  guides(fill = FALSE) +
+  facet_wrap(~region_continent) + # something went wrong with the first graph
+  labs(
+    x = "Type of treaty group",
+    y = "Number of treaties",
+    title = "Type of environmental treaties by continent"
+  )
+
+```
+
+# From signature to entry into force
+
+
+```{r}
+dp3 <- iea %>% 
+  select("subject_group", "tsig_yr", "teif_yr") %>% 
+  mutate(into_force = teif_yr - tsig_yr) %>% 
+  filter(into_force < 20) 
+  # group_by(into_force) 
+  # mutate(subject_group = fct_reorder(subject_group, into_force)) %>% 
+  
+ggplot(dp3, aes(fct_reorder(subject_group, into_force), into_force)) + # why fct_reorder doesn't work here?
+  geom_col(position = "dodge") + # not sure what the dodge does here. I just got weird result without dodge. 
+  coord_flip() +
+  scale_fill_viridis_d() +
+  labs(
+    x = "Number of years from signature to entry into force",
+    y = "Type of treaty group",
+    title = "Time gap (in year) between signature and entry into force of environmental treaties "
+  )
+
+  
+```
+
