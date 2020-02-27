@@ -38,7 +38,7 @@ iea %>%
   labs(
     x = "Type of treaty group",
     y = "Number of treaties",
-    title = "Type of environmental treaties by subjects"
+    title = "Type of treaties by subjects"
   )
 ```
 
@@ -46,19 +46,24 @@ iea %>%
 ``` {r}
 iea %>% 
   select("tsig_yr", "subject_group", "region_continent") %>% 
-  drop_na("region_continent") # why can't drop region_continent with no values?
-  arrange(tsig_yr) %>% 
-  group_by(subject_group) %>% 
-  ggplot(aes(region_continent, fill = subject_group)) +
+  filter(region_continent == c("Africa", "Asia", "Central America", 
+                              "Europe", "North America", "Oceania",
+                              "South America")) %>% 
+  # arrange(tsig_yr) %>% 
+  # group_by(subject_group) %>% 
+  ggplot(aes(subject_group, fill = subject_group)) +
   geom_bar(position = "dodge") +
   coord_flip() +
   guides(fill = FALSE) +
-  facet_wrap(~region_continent) + # something went wrong with the first graph
+  facet_wrap(~region_continent) + 
+  scale_color_OkabeIto() +
   labs(
     x = "Type of treaty group",
     y = "Number of treaties",
-    title = "Type of environmental treaties by continent"
+    title = "Type of treaties signed by continent"
   )
+
+# need to get the map somewhere
 
 ```
 
