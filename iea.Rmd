@@ -5,6 +5,9 @@ date: "February 7, 2020"
 output: html_document
 ---
 
+Hi reviewers! Please allow me to work on this for 2 more days (Thurs and Fri). There's still too many things I need to figure out.  I'll let you know when I'm more ready. Thank you for your understanding. 
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(rio)
@@ -13,14 +16,21 @@ library(tidyverse)
 library(ggplot2)
 library(gghighlight)
 library(colorblindr)
-iea <- import(here("data", "iea_measonly.dta"))
+
 ```
+
+
+```{r load data}
+iea <- import(here("data", "iea_measonly.dta"))
+
+```
+
 
 ```{r}
 
 iea %>% 
-  # mutate(subject_group = fct_reorder(subject_group, )) %>% 
-  ggplot(aes(subject_group, fill = subject_group))+
+  count(subject_group) %>% 
+  ggplot(aes(fct_reorder(subject_group), n), fill = subject_group) +
            geom_bar(position = "dodge") +
   facet_wrap(~agreement_type) +
   coord_flip() +
@@ -36,6 +46,7 @@ iea %>%
 ``` {r}
 iea %>% 
   select("tsig_yr", "subject_group", "region_continent") %>% 
+  drop_na("region_continent") # why can't drop region_continent with no values?
   arrange(tsig_yr) %>% 
   group_by(subject_group) %>% 
   ggplot(aes(region_continent, fill = subject_group)) +
@@ -58,7 +69,10 @@ iea %>%
 dp3 <- iea %>% 
   select("subject_group", "tsig_yr", "teif_yr") %>% 
   mutate(into_force = teif_yr - tsig_yr) %>% 
-  filter(into_force < 20) 
+  # mutate(ifelse(into_force > 20, "Not ratified", "")) # how to group the treaties nevered fot rarified (into_force > 20)
+  filter(into_force < 20) %>% 
+  filter(subject_group != "Uncoded")  %>% 
+  filter(subject_group != "")
   # group_by(into_force) 
   # mutate(subject_group = fct_reorder(subject_group, into_force)) %>% 
   
@@ -67,9 +81,11 @@ ggplot(dp3, aes(fct_reorder(subject_group, into_force), into_force)) + # why fct
   coord_flip() +
   scale_fill_viridis_d() +
   labs(
-    x = "Number of years from signature to entry into force",
-    y = "Type of treaty group",
-    title = "Time gap (in year) between signature and entry into force of environmental treaties "
+    x = "Type of treaty group",
+    y = "Number of years from signature to entry into force",
+    title = "Years from signature to entry into force across type of environmental treaties",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   )
 
   
