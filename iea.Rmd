@@ -21,14 +21,20 @@ library(colorblindr)
 
 
 ```{r load data}
-iea <- import(here("data", "iea_measonly.dta"))
+data <- import(here("data", "iea_measonly.dta"))
+
+# clean data
+data <- data %>% 
+  select("tsig_yr", "subject_group", "region_continent", "orgauspices") %>% 
+  filter(subject_group != "Uncoded")  %>% 
+  filter(subject_group != "") 
 
 ```
 
 
 ```{r}
 
-iea %>% 
+data %>% 
   count(subject_group) %>% 
   ggplot(aes(fct_reorder(subject_group), n), fill = subject_group) +
            geom_bar(position = "dodge") +
@@ -44,8 +50,8 @@ iea %>%
 
 
 ``` {r}
-iea %>% 
-  select("tsig_yr", "subject_group", "region_continent") %>% 
+data %>% 
+  
   filter(region_continent == c("Africa", "Asia", "Central America", 
                               "Europe", "North America", "Oceania",
                               "South America")) %>% 
@@ -59,8 +65,8 @@ iea %>%
   scale_color_OkabeIto() +
   labs(
     x = "Type of treaty group",
-    y = "Number of treaties",
-    title = "Type of treaties signed by continent"
+    y = "Number of treaty",
+    title = "Type of treaty signed by continent"
   )
 
 # need to get the map somewhere
@@ -68,31 +74,58 @@ iea %>%
 ```
 
 # From signature to entry into force
-
+Some signed treaties never got ratified, which is coded as a very large value in `tsig_yr`. We'll have diffrent visualization for group of treaties that were ratified and those were not. 
 
 ```{r}
-dp3 <- iea %>% 
+
+dp3 <- data %>% 
   select("subject_group", "tsig_yr", "teif_yr") %>% 
-  mutate(into_force = teif_yr - tsig_yr) %>% 
-  # mutate(ifelse(into_force > 20, "Not ratified", "")) # how to group the treaties nevered fot rarified (into_force > 20)
-  filter(into_force < 20) %>% 
-  filter(subject_group != "Uncoded")  %>% 
-  filter(subject_group != "")
-  # group_by(into_force) 
-  # mutate(subject_group = fct_reorder(subject_group, into_force)) %>% 
-  
-ggplot(dp3, aes(fct_reorder(subject_group, into_force), into_force)) + # why fct_reorder doesn't work here?
-  geom_col(position = "dodge") + # not sure what the dodge does here. I just got weird result without dodge. 
-  coord_flip() +
-  scale_fill_viridis_d() +
+  mutate(year_gap = teif_yr - tsig_yr) 
+
+# subset of data that the gap is > 20 years (not ratified)
+
+dp3_non <- subset(dp3, year_gap > 20) %>% 
+  count(subject_group) %>% 
+  mutate(percent = n/sum(n)*100) %>% 
+  ggplot(aes(fct_reorder(subject_group,percent), percent)) +
+    geom_col() +
+    coord_flip() +
   labs(
     x = "Type of treaty group",
-    y = "Number of years from signature to entry into force",
-    title = "Years from signature to entry into force across type of environmental treaties",
+    y = "Percent",
+    title = "Treaties signed but not ratified",
     caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
 Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   )
 
+#subset of data that the year gap is < 20 years (ratified)
+# Summarise table of average number of years gap between signature year and ratification year of each subject-group
+
+dp_rat <- dp3 %>% 
+  filter(year_gap < 20) %>% 
+  arrange(tsig_yr)
+  group_by(subject_group, year_gap) %>% 
+  summarise(mean = mean(year_gap), na.rm = TRUE) # how to calculate mean of year-gap for each group?
+
+library(gt)
+dp_rat %>% 
+  gt()
+
   
+```
+
+
+# Organization Auspices
+
+What kind of treaty are more likely to be under an organization auspices?
+```{r}
+
+data %>% 
+  group_by(subject_group, orgauspices) %>% 
+  count(orgauspices) %>% # not sure what the n is
+  ggplot(aes())
+  
+
+
 ```
 
