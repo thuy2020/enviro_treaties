@@ -16,6 +16,7 @@ library(tidyverse)
 library(ggplot2)
 library(gghighlight)
 library(colorblindr)
+library(rnaturalearth)
 library(gt)
 
 ```
@@ -68,11 +69,11 @@ data %>%
 Type of treaty across continents. Tab showing each type of treaty at a time. 
 
 ``` {r}
-data %>% 
+temp2 <- data %>% 
   
   filter(region_continent == c("Africa", "Asia", "Central America", 
                               "Europe", "North America", "Oceania",
-                              "South America")) %>% 
+                              "South America")) 
   # arrange(tsig_yr) %>% 
   # group_by(subject_group) %>% 
   ggplot(aes(subject_group, fill = subject_group)) +
@@ -87,11 +88,9 @@ data %>%
     title = "Type of treaty signed by continent"
   )
 
-map <- map_data("world") # need a map for continents
 
-install.packages("rnaturalearth")
-library(rnaturalearth)
-countries <- ne_countries(returnclass = "sf") # join in with other file
+countries <- ne_countries(returnclass = "sf") %>%  # join in with other file
+          right_join(temp2)
 ggplot(countries) +
   geom_sf()
 ```
@@ -106,8 +105,6 @@ dp3 <- data %>%
   mutate(year_gap = teif_yr - tsig_yr) 
 
 # subset of data that the gap is > 20 years (not ratified)
-
-# 
 
 dp3_pd <- dp3 %>% 
   mutate(ratified = ifelse(year_gap > 20, "Not Ratified", "Ratified")) %>% 
@@ -189,7 +186,7 @@ data %>%
                               "UNEP", orgauspices)) %>%
   drop_na(orgauspices) %>% 
   group_by(subject_group, orgauspices) %>% 
-  count(orgauspices) %>% # Number of subject_group treaty under an org? the last line seems to be the total count. How to get rid of it?
+  count(orgauspices) %>% 
   ggplot(aes(orgauspices, n)) +
   geom_col() +
   coord_flip() +
