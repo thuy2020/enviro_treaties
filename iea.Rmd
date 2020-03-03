@@ -28,6 +28,9 @@ library(gt)
 
 data <- import(here("data", "iea_measonly.dta"))
 
+data <- read_dta("iea_measonly.dta")
+#I don't know why, but the above code told me there was no such file in my directory, so I reset the directory and ran the below line
+
 # clean data
 data <- data %>% 
   select("tsig_yr","teif_yr","subject_group", "region_continent", "orgauspices") %>% 
@@ -46,6 +49,12 @@ data %>%
              orgauspices = "Auspice Organization") %>% 
   tab_header(title = "Treaty signed and ratified in the world between 1857 - 2016") %>% 
   tab_source_note(source_note = md("Data from [Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1)](http://iea.uoregon.edu/)"))
+
+#VEry cool data! Could you drop the last column since it apparently does not contain any data?
+#The title is a little misleading. "In the world" would include a lot of treaties. Do you mean "at the international level"?
+#Also, the title says 1857-2016 but the most recent row is for 1884. If you only display the first 10 I would take that into account in the title or plot all (which I bet was your plan anyways)
+#Can you shorten the link in the caption? It's visually a little dominating right now
+
 ```
 
 
@@ -70,12 +79,11 @@ Type of treaty across continents. Tab showing each type of treaty at a time.
 
 ``` {r}
 temp2 <- data %>% 
-  
   filter(region_continent == c("Africa", "Asia", "Central America", 
                               "Europe", "North America", "Oceania",
                               "South America")) 
-  # arrange(tsig_yr) %>% 
-  # group_by(subject_group) %>% 
+  arrange(tsig_yr) %>% 
+  group_by(subject_group) %>% 
   ggplot(aes(subject_group, fill = subject_group)) +
   geom_bar(position = "dodge") +
   coord_flip() +
@@ -88,11 +96,17 @@ temp2 <- data %>%
     title = "Type of treaty signed by continent"
   )
 
+#The code for this plot does not run, yielding the following error message:
+#Error: `data` must be a data frame, or other object coercible by `fortify()`, not an S3 object with class uneval
+#Did you accidentally pass `aes()` to the `data` argument?
+# When I uncomment the two lines it tells me it cannot find the variable tsig_yr
 
 countries <- ne_countries(returnclass = "sf") %>%  # join in with other file
           right_join(temp2)
 ggplot(countries) +
   geom_sf()
+#This doesn't run either, objects ne_countries and countries do not exist
+
 ```
 
 # From signature to entry into force
@@ -138,6 +152,11 @@ Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
   facet_wrap(~ratified)
 
+#Very cool plot, I love your topic! 
+#It's weird to see the title duplicated in the facets, can you give a title for the overall plot?
+#Can you change the background and surrounding lines for the facets? White background and no lines would be more parsimonious
+#Alternatively, I wonder if you could do the total number of treaties per type and then (stacked barplot) the number that is not ratified. That would allow for a more direct comparison
+
 library(patchwork)
 p1 + p2
 
@@ -152,6 +171,9 @@ dp_rat <- dp3 %>%
 library(gt)
 dp_rat %>% 
   gt()
+
+#Could you mean-center the variable? That way it would be easier to interpret the data and then you could also plot the difference as bar charts plus/minus 0
+
 ```
 
 
@@ -192,6 +214,9 @@ data %>%
   coord_flip() +
   facet_wrap(~subject_group, ncol = 1) +
   theme_gray(base_size = 20)
+
+#This plot is not legible for me because it shows too many rows on the left and too many facets
+#You could just pick a few types (like the three types with the ost treaties) and the plot would be a lot easier to understand
 
 ```
 
