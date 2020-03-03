@@ -5,6 +5,29 @@ date: "February 7, 2020"
 output: html_document
 ---
 
+Stephanie Gluck Peer Review 
+
+Area of Strength:
+
+1) I found the labeling of the X & Y axis and also title of the plot to be well done as I was able to easily undrestand what each of the visualization was trying to convey based on the included information (e.g., the visuals can stand alone)
+
+2) The use of coord_flip, fct_reorder, and facetting made the visualization easier to read and more impactful. 
+
+3) In reviewing Thuy's project, I found it helpful that Thuy included summary data tables that let me know a bi tmore about the data she is trying to visualize. 
+
+What I learned from reviewing Thuy's project: 
+
+I had not heard of the package "patchwork" before until I saw Thuy's project. I can see myself using this package in the future for patching plots together. Also I typically tend to tidy or organize my data separately before plotting them to ggplot but from looking at Thuy's code, I found that there can be times when tidying the data and directly piping it to ggplot would be useful and straightforward. 
+
+Area of Improvement: 
+
+1) For the Plot "Type of treaty signed by continent", I wonder if having a stacked bar graph may be useful in this case? I played with your code a bit to make the stacked bar graph (see codes below). I also wonder if there was a way to annotate the subject group direclty onto the bars themseles, although that may make the bar look very busy especialy on the continents with many different subject groups. 
+
+2) For the two patched plots with treaties. I think the X axis on the "Ratified" plot can be taken out since it is clear once you patch the 2 figure together that there is an X axis label on the "not ratified" plot. Similarly, I think the title for each plot can be omitted "Treaties signed but not ratified/ratified" and you can probably go with one large title above the 2 plots and even a subtitle to denote that the figures are separated by Not Ratified vs. Ratified. I made the comments in the codes for parts where you can possibly take out. 
+
+3) For the Organizaiton Auspice plot, it may be helfpul to clean the data separately and then plot it into ggplot instead of having cleaning and plotting all together in one large step as the cleaning appeared more intensive for this particular plot. For the visualization, it might be possible to show a stacked bar graph that depicts for each auspice organization, how many percent of their support goes to each of the subject groups and you can also list the total number of treaties each organiztion supported either within the plot or as a footnote (e.g., i noticed that IMO has a large number of support for pollution related treaties and FAO only supports species and fish realted treaties). 
+
+
 Hi reviewers! Please allow me to work on this for 2 more days (Thurs and Fri). There's still too many things I need to figure out.  I'll let you know when I'm more ready. Thank you for your understanding. 
 
 
@@ -17,8 +40,6 @@ library(ggplot2)
 library(gghighlight)
 library(colorblindr)
 library(rnaturalearth)
-library(gt)
-
 ```
 
 # Data
@@ -53,9 +74,9 @@ data %>%
 
 data %>% 
   count(subject_group) %>% 
-  ggplot(aes(fct_reorder(subject_group), n), fill = subject_group) +
-           geom_bar(position = "dodge") +
-  facet_wrap(~agreement_type) +
+  ggplot(aes(fct_reorder(subject_group, n), n, fill = subject_group)) + # I changed the code slightly as the previous code was not running for me. 
+           geom_bar(position = "dodge", stat = "identity") +
+  #facet_wrap(~agreement_type) + #I didn't see a column for agreement type
   coord_flip() +
   guides(fill = FALSE) +
   labs(
@@ -69,11 +90,20 @@ data %>%
 Type of treaty across continents. Tab showing each type of treaty at a time. 
 
 ``` {r}
+
+#if you want another method to filter 
+continent <- c("Africa", "Asia", "Central America", 
+                              "Europe", "North America", "Oceania",
+                              "South America")
 temp2 <- data %>% 
-  
+  filter(region_continent %in% continent)
+
+
+
+temp2 <- data %>% 
   filter(region_continent == c("Africa", "Asia", "Central America", 
                               "Europe", "North America", "Oceania",
-                              "South America")) 
+                              "South America")) %>% 
   # arrange(tsig_yr) %>% 
   # group_by(subject_group) %>% 
   ggplot(aes(subject_group, fill = subject_group)) +
@@ -87,6 +117,27 @@ temp2 <- data %>%
     y = "Number of treaty",
     title = "Type of treaty signed by continent"
   )
+
+#SG, I played around with your data/plot a bit below. I just wonder if this is a unique case where stacked bar graph is actaully acceptable since there seems to be so few treaty signed in some continents such as Oceania and North America which a stacked bar graph can really highlight. I know for other countires like Europe and Asia, the colors that stack ontop of each other may become a bit much. I also wonder if it was possible to just annonate with text within the bars what each of the treaty is about. 
+
+data %>% 
+  filter(region_continent == c("Africa", "Asia", "Central America", 
+                              "Europe", "North America", "Oceania",
+                              "South America")) %>% 
+  # arrange(tsig_yr) %>% 
+  # group_by(subject_group) %>% 
+  ggplot(aes(region_continent, fill = subject_group)) +
+  geom_bar() +
+  coord_flip() +
+  #guides(fill = FALSE) +
+  #facet_wrap(~region_continent) + 
+  scale_color_OkabeIto() +
+  labs(
+    x = "Type of treaty group",
+    y = "Number of treaty",
+    title = "Type of treaty signed by continent"
+  ) + 
+  theme(legend.position = "bottom")
 
 
 countries <- ne_countries(returnclass = "sf") %>%  # join in with other file
@@ -122,7 +173,7 @@ ggplot(aes(fct_reorder(subject_group, percent), percent)) +
     y = "Percent",
     title = "Treaties signed but not ratified"
   ) +
-  facet_wrap(~ratified)
+  facet_wrap(~ratified) #I think you might not need the facet_wrap since you only filtered by "not ratified". 
 
 p2 <- dp3_pd %>% 
   filter(ratified == "Ratified") %>% 
@@ -130,13 +181,13 @@ ggplot(aes(fct_reorder(subject_group, percent), percent)) +
     geom_col() +
     coord_flip() +
   labs(
-    x = "Type of treaty group",
+    x = "Type of treaty group", # Maybe take out the X axis label here since it is clear once you patch the 2 figure together that there is an X axis label on the "not ratified" plot. 
     y = "Percent",
-    title = "Treaties signed but not ratified",
+    title = "Treaties signed but ratified", #corrected from not ratified to ratified
     caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
 Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
-  facet_wrap(~ratified)
+  facet_wrap(~ratified) # might not need to facet wrap if already filtered
 
 library(patchwork)
 p1 + p2
