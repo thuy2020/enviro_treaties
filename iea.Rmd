@@ -31,9 +31,12 @@ iea %>%
     title = "Type of environmental treaties by subjects"
   )
 ```
-Thuy, in the plot below, if you do a count on region_continent, you get a tibble: 10 x 2 showing the first region_continent name is blank and has an n size = 738, a larger n size than all other rigion_continents combined. Perhaps you could drop the blank name and that would help make the output meaninful?
+  
+  Thuy, in the plot below, if you do a count on region_continent, you get a tibble: 10 x 2 showing the first region_continent name is blank and has an n size = 738, a larger n size than all other rigion_continents combined. Perhaps you could drop the blank name and that would help make the output meaninful?  
+  \floatbarrier
 ![missing continent](table/region_continent.png)
-```{r continent_plot, fig.width = 6, fig.height = 4}
+  
+```{r continent_plot, fig.width = 6, fig.height = 8}
 iea %>%
   select("tsig_yr",
          "subject_group",
@@ -53,7 +56,7 @@ iea %>%
 ```
 
 # From signature to entry into force
-```{rr timegap_plot, fig.width = 6, fig.height = 4}
+```{r timegap_plot, fig.width = 6, fig.height = 4}
 dp3 <- iea %>%
   select("subject_group",
          "tsig_yr",
@@ -61,15 +64,15 @@ dp3 <- iea %>%
   mutate(into_force = teif_yr - tsig_yr) %>%
   filter(into_force < 20)
   # group_by(into_force) 
-  # mutate(subject_group = fct_reorder(subject_group, into_force)) %>% 
-  
+  # mutate(subject_group = fct_reorder(subject_group, into_force)) %>%
+
 ggplot(dp3, aes(fct_reorder(subject_group, into_force), into_force)) + # why fct_reorder doesn't work here?
   geom_col(position = "dodge") + # not sure what the dodge does here. I just got weird result without dodge. 
   coord_flip() +
   scale_fill_viridis_d() +
   labs(
-    x = "Number of years from signature to entry into force",
-    y = "Type of treaty group",
+    y = "Number of years from signature to entry into force",
+    x = "Type of treaty group",
     title = "Time gap (in year) between signature and entry into force of environmental treaties "
   )
 ```
