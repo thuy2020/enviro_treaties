@@ -55,8 +55,6 @@ d_table <- d %>%
 
 ## Change in number of agreements over time
 ```{r, fig.width=12}
-library(lubridate)
-
 #bind_rows()
 # put it all to one dataset, creat variables
 
@@ -92,7 +90,7 @@ event <- tibble(date = lubridate::mdy(c("December 31, 1972")),
 # 
 # temp <- rbind.fill(species, pollution)
 
- d %>% 
+ change_number <- d %>% 
   group_by(tsig_yr) %>%
   add_count()  %>% 
   mutate(date = mdy(paste0("01-01-", tsig_yr))) %>% 
@@ -124,7 +122,7 @@ Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   theme_minimal() 
  # transition_reveal(tsig_yr) why this doesn't work?
 
-
+ ggsave(file="change_number.pdf")
 
 ```
 
@@ -176,7 +174,7 @@ option2 <- d_at %>%
   labs(
     x = "",
     y = "",
-    title = "Environmental Agreements Signed by type 1857 - 2016",
+    title = "Environmental Agreements Signed \n by type 1857 - 2016",
     caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
 Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
@@ -202,15 +200,18 @@ ggplot(aes(tsig_yr, agreement_type)) +
 Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   )
 
-option1 # the best?
-option2
-option3 # my be not
 
+option3 # my be not
+option2
+option1 # the best?
+# ggsave("option1.pdf")
+ggsave("option2.pdf")
+# ggsave("option3.pdf")
 ```
 
 ## Change in subject of agreements over time
 
-```{r fig.width=10, fig.height=10}
+```{r fig.width=12, fig.height=10}
 # Type of treaty in each historical period
 # Problem: not in the same scale
 
@@ -222,20 +223,21 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
   geom_col(fill = "cornflowerblue") +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -1,
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
     y = "",
-    title = "Number of Agreements by Subject Before 1945"
+    title = "Number of Agreements by Subject \n
+    Before 1945"
   )
 
 # highlight new subjects in this period
 newsubject4570 <- d %>% 
   filter(tsig_yr > 1944 &
-          tsig_yr < 1970) %>%
+          tsig_yr < 1972) %>%
   filter(subject_category == "Ocean" | 
          subject_category == "General" |
          subject_category == "Habitat") %>% 
@@ -244,30 +246,30 @@ newsubject4570 <- d %>%
 
 bt4570 <- d %>% 
   filter(tsig_yr > 1944 &
-          tsig_yr < 1970) %>% 
+          tsig_yr < 1972) %>% 
   group_by(subject_category) %>% 
   count(subject_category) %>% 
 ggplot(aes(fct_reorder(subject_category,n), n))+
   geom_col(fill = "cornflowerblue", 
            alpha = .5) +
-  geom_col(data = newsubject4570,  
-           fill = "#C55644") + 
+  geom_col(data = newsubject4570,
+           fill = "#C55644") +
   scale_fill_OkabeIto() +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -2, # hard to get the right value. 
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
     y = "",
-    title = "Number of Agreements by Subject Between 1945 - 1970"
+    title = "Between 1945 - 1972"
   ) 
 
 
 newsubject70001 <- d %>% 
-  filter(tsig_yr > 1969 &
+  filter(tsig_yr > 1971 &
         tsig_yr < 2000) %>% 
   filter(subject_category == "Ocean" | 
          subject_category == "General" |
@@ -276,7 +278,7 @@ newsubject70001 <- d %>%
   count(subject_category)
 
 newsubject70002 <- d %>% 
-  filter(tsig_yr > 1969 &
+  filter(tsig_yr > 1971 &
         tsig_yr < 2000) %>% 
   mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>%
   filter(subject_category == "Other") %>% 
@@ -284,29 +286,29 @@ newsubject70002 <- d %>%
   count(subject_category)
 
 bt7000 <- d %>%  
-  filter(tsig_yr > 1969 &
+  filter(tsig_yr > 1971 &
         tsig_yr < 2000) %>% 
   mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>% 
   group_by(subject_category) %>% 
   count(subject_category)  %>% 
 ggplot(aes(fct_reorder(subject_category,n), n))+
-  geom_col(fill = "cornflowerblue", 
+  geom_col(fill = "cornflowerblue",
            alpha = .5) +
-  geom_col(data = newsubject70001,  # want to highlight new subjects
+  geom_col(data = newsubject70001,  
            fill = "#C55644",
            alpha = .5) +
   geom_col(data = newsubject70002,
            fill = "purple") +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -6,
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
     y = "",
-    title = "Number of Agreements by Subject Between 1970 - 2000"
+    title = "Between 1972 - 2000"
   )
 
 newsubject20001 <- d %>% 
@@ -334,29 +336,30 @@ af2000 <- d %>%
 ggplot(aes(fct_reorder(subject_category,n), n))+
   geom_col(fill = "cornflowerblue", 
            alpha = .5) +
-  geom_col(data = newsubject20001,  
+  geom_col(data = newsubject20001,
            fill = "#C55644",
            alpha = .5) +
-  geom_col(data = newsubject20002,  
+  geom_col(data = newsubject20002,
            fill = "purple",
            alpha = .5) +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -1, 
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
     y = "",
-    title = "Number of Agreement by Subject After 2000", 
+    title = "After 2000", 
     caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
 Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) 
   
-
-bf45 + bt4570 + bt7000 + af2000
-
+change_type <- bf45 + bt4570 + bt7000 + af2000
+# change_type2 <- bf45 + bt4570 + bt7000 + af2000
+# ggsave("change_type.pdf", scale = 2)
+# ggsave("change_type2.pdf", scale = 2)
 ```
 
 # Lineages 
