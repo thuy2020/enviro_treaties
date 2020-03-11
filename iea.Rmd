@@ -5,8 +5,6 @@ date: "February 7, 2020"
 output: html_document
 ---
 
-Hi reviewers! Please allow me to work on this for 2 more days (Thurs and Fri). There's still too many things I need to figure out.  I'll let you know when I'm more ready. Thank you for your understanding. 
-
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -18,103 +16,377 @@ library(gghighlight)
 library(colorblindr)
 library(rnaturalearth)
 library(gt)
-
+library(reactable)
+library(gganimate)
+library(patchwork)
+library(ggridges)
 ```
 
-# Data
+# Data description
 
-```{r load data}
+```{r load data, eval = FALSE}
 # Raw data
 
-data <- import(here("data", "iea_measonly.dta"))
+data <- import(here("data", "iea_measonly.dta")) 
+# what could be the reason for this? 
+# PR: I don't know why, but the above code told me there was no such file in my directory, so I reset the directory and ran the below line
+# data <- read_dta("iea_measonly.dta")
 
-# clean data
-data <- data %>% 
-  select("tsig_yr","teif_yr","subject_group", "region_continent", "orgauspices") %>% 
-  filter(subject_group != "Uncoded")  %>% 
-  filter(subject_group != "") %>% 
-  arrange(tsig_yr)
+d <- data %>% 
+  select(tsig_yr, teif_yr, subject_category, lineage)
 
-# table showing data set using to produce graphs 
-data %>% 
-  head(n = 10) %>% 
-  gt() %>% 
-  cols_label(tsig_yr = "Year signed",
-             teif_yr = "Year ratified",
-             subject_group = "Group type of treaty",
-             region_continent = "Continent", 
-             orgauspices = "Auspice Organization") %>% 
-  tab_header(title = "Treaty signed and ratified in the world between 1857 - 2016") %>% 
-  tab_source_note(source_note = md("Data from [Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1)](http://iea.uoregon.edu/)"))
+# Subset of data used for the following demonstrations
+# d_table <- d %>% 
+#   arrange(tsig_yr) %>% 
+#   gt() %>% 
+#   cols_label(tsig_yr = "Year signed",
+#              teif_yr = "Year ratified",
+#              subject_category = "Subject",
+#              lineage = "Lineage") %>% 
+#   tab_header(title = "Mutilateral Environmental Agreements 1857 - 2016") %>% 
+#   tab_source_note(source_note = md("Data from [Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project](http://iea.uoregon.edu/)")) 
+
+reactable(d) #?? can't work
 ```
 
+# Evolution of International Environmental Law: Number, Type, and Subjects
 
-```{r}
+## Change in number of agreements over time
+```{r, fig.width=12, eval = FALSE }
+library(lubridate)
 
-data %>% 
-  count(subject_group) %>% 
-  ggplot(aes(fct_reorder(subject_group), n), fill = subject_group) +
-           geom_bar(position = "dodge") +
-  facet_wrap(~agreement_type) +
-  coord_flip() +
-  guides(fill = FALSE) +
-  labs(
-    x = "Type of treaty group",
-    y = "Number of treaties",
-    title = "Type of treaties by subjects"
-  )
-```
+#bind_rows()
+# put it all to one dataset, creat variables
 
-# Mapping data
-Type of treaty across continents. Tab showing each type of treaty at a time. 
-
-``` {r}
-temp2 <- data %>% 
+species <- d %>% 
+  select(subject_category, tsig_yr) %>% 
+  filter(subject_category == "Species") %>% 
+  group_by(tsig_yr) %>% 
+  count() %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr))) # to transfer the x as numbers into date
   
-  filter(region_continent == c("Africa", "Asia", "Central America", 
-                              "Europe", "North America", "Oceania",
-                              "South America")) 
-  # arrange(tsig_yr) %>% 
-  # group_by(subject_group) %>% 
-  ggplot(aes(subject_group, fill = subject_group)) +
-  geom_bar(position = "dodge") +
-  coord_flip() +
-  guides(fill = FALSE) +
-  facet_wrap(~region_continent) + 
-  scale_color_OkabeIto() +
+
+pollution <- d %>% 
+  select(subject_category, tsig_yr) %>% 
+  filter(subject_category == "Pollution") %>% 
+  group_by(tsig_yr) %>% 
+  count() %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr))) 
+
+event <- tibble(date = lubridate::mdy(c("December 31, 1972", 
+                                        "December 31, 2005")),
+                text = c("UN Conference on Human Environment",
+                          "Another event"))
+
+
+d %>% 
+  group_by(tsig_yr) %>%
+  add_count()  %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr))) %>% 
+  ggplot(aes(date, n)) +
+  geom_line(color = "gray40") +
+  geom_line(data = species, color = "darkgreen") +
+  geom_line(data = pollution, color = "purple") +
+  geom_vline(aes(xintercept = date), 
+             data = event,
+             color = "gray40",
+             lty = "dashed") +
+  geom_text(aes(x = date, y = 45, label = text),
+            data = event,
+            color = "black",
+            nudge_x = 2) +
   labs(
-    x = "Type of treaty group",
-    y = "Number of treaty",
-    title = "Type of treaty signed by continent"
+    x = "",
+    y = "Number of Agreements Signed",
+    title = "International Environmental Agreements Signed between 1857 - 2016",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+  ) +
+  # legend(name = "Polluion", 
+  #        color = "purple") +
+  theme_minimal() 
+ # transition_reveal(tsig_yr) why this doesn't work?
+
+
+# other way
+# tmp<- bind_rows(species, pollution) how to get these 2 as 2 variable, put all in one dataset
+# 
+# d %>% 
+#   pivot_wider(names_from = subject_category,
+#               values_from = tsig_yr) 
+
+```
+
+
+Distill::create_post("My")
+
+## Change in type of agreements over time
+
+```{r Agreement type, eval = FALSE}
+
+bp_theme <- function(...) {
+  theme_minimal(...) +
+    theme(panel.grid.major.y = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          panel.grid.major.x = element_line(color = "gray80"))
+          # plot.title.position = "plot") # "plot.title.position" is not a valid theme element name. 
+}
+
+d_at <- data %>% 
+  select(tsig_yr, agreement_type) %>% 
+  group_by(tsig_yr, agreement_type) %>% 
+  count() 
+
+
+option1 <- d_at%>% 
+  ggplot(aes(tsig_yr, n, fill = agreement_type)) +
+  geom_ribbon(aes(ymin = 0,
+                  ymax = n,
+                  fill = agreement_type,
+                  color = agreement_type),
+              alpha = 0.4) +
+  scale_fill_brewer("agreement_type", palette = "Set2")  +
+  scale_color_brewer("agreement_type", palette = "Set2") +
+  facet_wrap(~agreement_type) +
+   labs(
+    x = "",
+    y = "Number of Agreements Signed",
+    title = "Environmental Agreements Signed by Type between 1857 - 2016",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+  ) +
+  guides(fill = FALSE, color = FALSE) +
+  theme_minimal() 
+
+
+option2 <- d_at %>% 
+ ggplot(aes(tsig_yr, agreement_type)) +
+  geom_density_ridges(color = "white",
+                                fill = "#A9E5C5") +
+  xlim(1857,2016) +
+  labs(
+    x = "",
+    y = "",
+    title = "Environmental Agreements Signed by type 1857 - 2016",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+  ) +
+  guides(fill = FALSE, color = FALSE) +
+  theme_minimal(base_size = 15) 
+
+option3 <- d_at %>% 
+ggplot(aes(tsig_yr, agreement_type)) +
+  geom_tile(aes(fill = n),
+            color = "gray90") +
+  scale_fill_viridis_c(option = "magma") +
+  # coord_fixed() +     coord_fixed make the fig high too small
+  theme(legend.position = "bottom", # why not?
+        legend.direction = "horizontal", # how to get the plot bigger? fig.with and fig.heigh don't help
+        legend.key.size = unit(1, 'cm'),
+        legend.key.height = unit(0.5,"cm")) +
+  bp_theme() +
+  labs(
+    x = "",
+    y = "Type of Agreement",
+    title = "Environmental Agreements Signed by Type between 1857 - 2016",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+  )
+
+option1 # the best?
+option2
+option3 # my be not
+
+```
+
+## Change in subject of agreements over time
+
+```{r fig.width=10, fig.height=10, eval = FALSE}
+# Type of treaty in each historical period
+# Problem: not in the same scale
+
+bf45 <- d %>% 
+  filter(tsig_yr < 1945) %>% 
+group_by(subject_category) %>% 
+  count(subject_category) %>% 
+ggplot(aes(fct_reorder(subject_category,n), n))+
+  geom_col(fill = "cornflowerblue") +
+  geom_text(aes(subject_category, n, label = n),
+            nudge_y = -1,
+            size = 4,
+            color = "white") +
+  coord_flip() +
+  bp_theme(base_size = 10) +
+  guides(fill = FALSE, color = FALSE) +
+  labs(
+    x = "",
+    y = "",
+    title = "Subject of Agreement Before 1945"
+  )
+
+# want to highlight new subjects
+newsubject4570 <- d %>% 
+  filter(subject_category == "Ocean" | 
+         subject_category == "General" |
+         subject_category == "Habitat") %>% 
+  group_by(subject_category) %>% 
+  count(subject_category)
+
+bt4570 <- d %>% 
+  filter(tsig_yr > 1944 &
+        tsig_yr < 1970) %>% 
+  group_by(subject_category) %>% 
+  count(subject_category) %>% 
+ggplot(aes(fct_reorder(subject_category,n), n))+
+  geom_col(fill = "cornflowerblue") +
+  geom_col(data = newsubject4570,  # want to highlight new subjects --> this take data from all periods
+           fill = "red") + # should highlight only things in this period 
+  geom_text(aes(subject_category, n, label = n),
+            nudge_y = -2,
+            size = 4,
+            color = "white") +
+  coord_flip() +
+  bp_theme(base_size = 10) +
+  guides(fill = FALSE, color = FALSE) +
+  labs(
+    x = "",
+    y = "",
+    title = "Subject of Agreement Before Between 1945 - 1970"
+  ) 
+
+bt7000 <- d %>%  
+  filter(tsig_yr > 1969 &
+        tsig_yr < 2000) %>% 
+  group_by(subject_category) %>% 
+  count(subject_category)  %>% 
+ggplot(aes(fct_reorder(subject_category,n), n))+
+  geom_col(fill = "cornflowerblue") +
+  geom_col(data = newsubject4570,  # want to highlight new subjects
+           fill = "red") +
+  geom_text(aes(subject_category, n, label = n),
+            nudge_y = -8,
+            size = 4,
+            color = "white") +
+  coord_flip() +
+  bp_theme(base_size = 10) +
+  guides(fill = FALSE, color = FALSE) +
+  labs(
+    x = "",
+    y = "",
+    title = "Subject of Agreement Before Between 1970 - 2000"
   )
 
 
-countries <- ne_countries(returnclass = "sf") %>%  # join in with other file
-          right_join(temp2)
-ggplot(countries) +
-  geom_sf()
+newsubject2000 <- d %>% 
+  filter(subject_category == "Ocean" | 
+         subject_category == "General" |
+         subject_category == "Other" |  
+         subject_category == "Habitat") %>% 
+  group_by(subject_category) %>% 
+  count(subject_category)
+
+af2000 <- d %>% 
+  filter(tsig_yr > 1999) %>% 
+  mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>% 
+  group_by(subject_category) %>% 
+  count(subject_category) %>% 
+ggplot(aes(fct_reorder(subject_category,n), n))+
+  geom_col(fill = "cornflowerblue") +
+  geom_col(data = newsubject2000,  # want to highlight new subjects
+           fill = "green") +
+  geom_text(aes(subject_category, n, label = n),
+            nudge_y = -6,
+            size = 4,
+            color = "white") +
+  coord_flip() +
+  bp_theme(base_size = 10) +
+  guides(fill = FALSE, color = FALSE) +
+  labs(
+    x = "",
+    y = "",
+    title = "Subject of Agreement Before After 2000", 
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+  ) 
+  
+
+bf45 + bt4570 + bt7000 + af2000
+
 ```
+
+# Lineages 
+
+"The sizes of lineages (the number of IEAs each contains) reflect quite difference governance approaches. Of `total_lng` lineages, most (`(top15\total_lng)*100` percent) are not dynamic regulatory efforts and contain only an initial MEA and one or two modify protocols or amendments. By contrast, each of the 15 largest lineages contain twenty or more MEAs, collectively accounting for `top15` MEAs, almost one-third of the  MEAs".
+(Mitchell 2020, p.108)
+
+```{r, eval = FALSE}
+lng <- data %>% 
+  select(lineage, tsig_yr) %>% 
+  mutate(lineage = ifelse(lineage == "", "Other", lineage)) %>%
+  add_count(lineage) %>% 
+  arrange(desc(n)) 
+  # slice(1:10) want to get the first 10
+  # filter(n >14) 
+
+# top10 <- lng %>% 
+#   group_by(lineage) %>% 
+#   count() %>% 
+#   top_n(10, n)
+  
+total_lng <- lng %>% 
+summarise(total = sum(n))
+
+top15 <- lng %>% 
+filter(n >14) %>% # not the best way to get the top ones
+summarise(total = sum(n))
+
+
+lng %>% 
+  filter(n >14) %>%
+  ggplot(aes(fct_reorder(lineage, n), n)) +
+  geom_col(aes(fill = lineage)) +
+  coord_flip() +
+  bp_theme() +
+  labs(
+    x = "",
+    y = "",
+    title = "Number of Multilateral Evironmental Agreement \n of each in the top 15 lineages",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+    
+  ) +
+   guides(fill = FALSE)
+
+
+# idea: plot the point, add text to note few top lineage
+lng %>% 
+  group_by(tsig_yr)
+  ggplot(aes(tsig_yr, n, group = lineage, color = lineage)) +
+  geom_point(aes(size = n)) +
+  guides(color = FALSE)
+  
+# idea: collapse all the rest into one row
+
+
+```
+
 
 # From signature to entry into force
 Some signed treaties never got ratified, which is coded as a very large value in `tsig_yr`. We'll have diffrent visualization for group of treaties that were ratified and those were not. 
 
-```{r}
-
-dp3 <- data %>% 
-  select("subject_group", "tsig_yr", "teif_yr") %>% 
-  mutate(year_gap = teif_yr - tsig_yr) 
+```{r }
 
 # subset of data that the gap is > 20 years (not ratified)
 
-dp3_pd <- dp3 %>% 
-  mutate(ratified = ifelse(year_gap > 20, "Not Ratified", "Ratified")) %>% 
-  count(subject_group, ratified) %>% 
-  group_by(ratified) %>% 
-  mutate(percent = (n/sum(n))*100) #%>% 
+dp3_pd <- dp3 %>%
+  mutate(ratified = ifelse(year_gap > 20, "Not Ratified", "Ratified")) %>%
+  count(subject_category, ratified) %>%
+  group_by(ratified) %>%
+  mutate(percent = (n/sum(n))*100) #%>%
 
-p1 <- dp3_pd %>% 
-  filter(ratified == "Not Ratified") %>% 
-ggplot(aes(fct_reorder(subject_group, percent), percent)) +
+p1 <- dp3_pd %>%
+  filter(ratified == "Not Ratified") %>%
+ggplot(aes(fct_reorder(subject_category, percent), percent)) +
     geom_col() +
     coord_flip() +
   labs(
@@ -124,15 +396,14 @@ ggplot(aes(fct_reorder(subject_group, percent), percent)) +
   ) +
   facet_wrap(~ratified)
 
-p2 <- dp3_pd %>% 
-  filter(ratified == "Ratified") %>% 
-ggplot(aes(fct_reorder(subject_group, percent), percent)) +
+p2 <- dp3_pd %>%
+  filter(ratified == "Ratified") %>%
+ggplot(aes(fct_reorder(subject_category, percent), percent)) +
     geom_col() +
     coord_flip() +
   labs(
     x = "Type of treaty group",
     y = "Percent",
-    title = "Treaties signed but not ratified",
     caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
 Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
@@ -144,54 +415,57 @@ p1 + p2
 #subset of data that the year gap is < 20 years (ratified)
 # Summarise table of average number of years gap between signature year and ratification year of each subject-group
 
-dp_rat <- dp3 %>% 
-  filter(year_gap < 20) %>% 
-  group_by(subject_group) %>% 
+dp_rat <- dp3 %>%
+  filter(year_gap < 20) %>%
+  group_by(subject_category) %>%
   summarise(mean = mean(year_gap, na.rm = TRUE)) # how to calculate mean of year-gap for each group?
 
 library(gt)
-dp_rat %>% 
+dp_rat %>%
   gt()
+  
 ```
-
 
 # Organization Auspices
 
 What kind of treaty are more likely to be under an organization auspices?
 ```{r, fig.height = 30, fig.width = 10}
 
-data %>% 
-  count(orgauspices) %>% 
-  View()
-
-data %>% 
-  mutate(orgauspices = ifelse(orgauspices == "", NA_character_, orgauspices)) %>% 
-  mutate(orgauspices = ifelse(orgauspices =="UN Economic Commission for Europe (UNECE)" |
-                              orgauspices =="UNECE",
-                              "UN Economic Commission for Europe", orgauspices)) %>% 
-  mutate(orgauspices = ifelse(orgauspices =="FAO; Concluded under Article XIV of the FAO Constitution" | 
-                              orgauspices =="FAO Depositary" |
-                              orgauspices =="FAO;  and Article VIII of the International Plant Protection Convention", 
-                              "FAO", orgauspices)) %>% 
-  mutate(orgauspices = ifelse(orgauspices =="Permanent Commission of the South Pacific (CPPS)",
-                              "Commission of the South Pacific", orgauspices)) %>%
-  mutate(orgauspices = ifelse(orgauspices =="Permanent Commission of the South Pacific (CPPS)",
-                              "Commission of the South Pacific", orgauspices)) %>%
-  mutate(orgauspices = ifelse(orgauspices =="Forum Fisheries Agency (FFA)",
-                              "Forum Fisheries Agency", orgauspices)) %>%
-  mutate(orgauspices = ifelse(orgauspices =="UN Economic Commission for Europe",
-                              "United Nations", orgauspices)) %>%
-  mutate(orgauspices = ifelse(orgauspices =="UNEP CMS Secretariat" | 
-                              orgauspices =="UNEP Caribbean Environment Programme",
-                              "UNEP", orgauspices)) %>%
-  drop_na(orgauspices) %>% 
-  group_by(subject_group, orgauspices) %>% 
-  count(orgauspices) %>% 
-  ggplot(aes(orgauspices, n)) +
-  geom_col() +
-  coord_flip() +
-  facet_wrap(~subject_group, ncol = 1) +
-  theme_gray(base_size = 20)
+# data %>% 
+#   count(orgauspices) %>% 
+#   View()
+# 
+# data %>% 
+#   mutate(orgauspices = ifelse(orgauspices == "", NA_character_, orgauspices)) %>% 
+#   mutate(orgauspices = ifelse(orgauspices =="UN Economic Commission for Europe (UNECE)" |
+#                               orgauspices =="UNECE",
+#                               "UN Economic Commission for Europe", orgauspices)) %>% 
+#   mutate(orgauspices = ifelse(orgauspices =="FAO; Concluded under Article XIV of the FAO Constitution" | 
+#                               orgauspices =="FAO Depositary" |
+#                               orgauspices =="FAO;  and Article VIII of the International Plant Protection Convention", 
+#                               "FAO", orgauspices)) %>% 
+#   mutate(orgauspices = ifelse(orgauspices =="Permanent Commission of the South Pacific (CPPS)",
+#                               "Commission of the South Pacific", orgauspices)) %>%
+#   mutate(orgauspices = ifelse(orgauspices =="Permanent Commission of the South Pacific (CPPS)",
+#                               "Commission of the South Pacific", orgauspices)) %>%
+#   mutate(orgauspices = ifelse(orgauspices =="Forum Fisheries Agency (FFA)",
+#                               "Forum Fisheries Agency", orgauspices)) %>%
+#   mutate(orgauspices = ifelse(orgauspices =="UN Economic Commission for Europe",
+#                               "United Nations", orgauspices)) %>%
+#   mutate(orgauspices = ifelse(orgauspices =="UNEP CMS Secretariat" | 
+#                               orgauspices =="UNEP Caribbean Environment Programme",
+#                               "UNEP", orgauspices)) %>%
+#   drop_na(orgauspices) %>% 
+#   group_by(subject_category, orgauspices) %>% 
+#   count(orgauspices) %>% 
+#   ggplot(aes(orgauspices, n)) +
+#   geom_col() +
+#   coord_flip() +
+#   facet_wrap(~subject_category, ncol = 1) +
+#   theme_gray(base_size = 20)
 
 ```
 
+# Reference
+
+Mitchell, Ronald B., et al. "What We Know (and Could Know) About International Environmental Agreements." Global Environmental Politics 20.1 (2020): 103-121.

@@ -1,0 +1,171 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rio)
+library(here)
+library(tidyverse)
+library(ggplot2)
+library(gghighlight)
+library(colorblindr)
+library(rnaturalearth)
+library(gt)
+library(reactable)
+library(gganimate)
+library(patchwork)
+library(ggridges)
+library(flexdashboard)
+
+```
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r data}
+data <- import(here("data", "iea_measonly.dta")) 
+d1 <- data %>% 
+  select(tsig_yr, teif_yr, subject_category, lineage) %>% 
+  arrange(tsig_yr) %>% 
+  gt() %>% 
+  cols_label(tsig_yr = "Year signed",
+             teif_yr = "Year ratified",
+             subject_category = "Group type of treaty",
+             lineage = "Lineage") %>% 
+  tab_header(title = "Mutilateral Environmental Agreements 1857 - 2016") %>% 
+  tab_source_note(source_note = md("Data from [Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project](http://iea.uoregon.edu/)")) 
+
+
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+# # Gauges
+# 1311 treaties
+# into force rate
+# terminated rate
+
+
+```
+
+``` {r box}
+# Ratification
+
+dp3 <- data %>%
+  select("subject_category", "tsig_yr", "teif_yr") %>%
+  mutate(year_gap = teif_yr - tsig_yr) %>% 
+  # filter(year_gap > 100)
+  filter(year_gap < 100) %>% 
+  group_by(year_gap) %>% # 349 year_gap = 0 
+  count() 
+  summary(avg_gap = mean(year_gap)) #???
+# mean 2.236
+  
+  
+  sameyear = function(...) return(349)
+  meanyear = function(...) return(2.2)
+  never = function(...) return(141)
+  
+```
+
+### Ratified in the same year signed
+
+```{r}
+
+ratifysameyear = sameyear()
+valueBox(ratifysameyear, icon = "fa-clock-o")
+
+
+```
+
+### Average year from signed to ratified
+
+```{r}
+
+avgyearbetween = meanyear()
+valueBox(avgyearbetween, icon = "fa-pause")
+
+```
+
+### Never ratified
+
+```{r}
+neverratify = never()
+valueBox(neverratify, icon = "fa-ban")
+
+```
+
+
+
+
+```{r data for Gauges }
+# Total
+nrow(data) #1311
+# consent to be bound 448/1311
+data %>% 
+  select(t_more_research, t_tap_clause1, region_type, region_continent, eif_type1) %>% 
+  group_by(eif_type1) %>% 
+  count(eif_type1)
+
+
+# Politically adaptive 36
+data %>% 
+  select(t_more_research, t_tap_clause1, region_type, dynamic, eif_type1) %>% 
+  group_by(dynamic) %>% 
+  count(dynamic)
+
+
+# Regular updating needed 264
+data %>% 
+  select(t_more_research, t_tap_clause1, region_type, region_continent, eif_type1) %>% 
+  group_by(t_more_research) %>% 
+  count(t_more_research)
+
+
+```
+
+### Consent to be bound
+
+```{r}
+gauge(448, min = 0, max = 1311, , gaugeSectors(
+  success = c(80, 100), warning = c(40, 79), danger = c(0, 39)
+))
+```
+
+### Regular updating needed
+
+```{r}
+gauge(264, min = 0, max = 1311, gaugeSectors(
+  success = c(41, 50), warning = c(21, 40), danger = c(0, 20)
+))
+
+```
+
+### Politically adaptive 36
+
+```{r}
+gauge(36, min = 0, max = 1311, gaugeSectors(
+  success = c(0, 2), warning = c(3, 6), danger = c(7, 10)
+))
+```
+
+
+### Chart C
+
+```{r}
+
+```
+
