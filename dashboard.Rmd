@@ -109,8 +109,6 @@ valueBox(neverratify, icon = "fa-ban")
 ```
 
 
-
-
 ```{r data for Gauges }
 # Total
 nrow(data) #1311
