@@ -23,20 +23,23 @@ library(ggridges)
 library(flexdashboard)
 ```
 
-
 Data  {data-icon="fa-table"}
 =======================================
 
-Column {data-width=500}
+Column {data-width=550}
 -----------------------------------------------------------------------
 
-### Original Data
+### Original Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1).\n
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
 
 ```{r echo = FALSE}
 data <- import(here("data", "iea_measonly.dta"))
-reactable(data)
+reactable(data, 
+          defaultSortOrder = "desc",
+          filterable = TRUE, minRows = 10)
 ```
 
+Column {data-width=450}
 -----------------------------------------------------------------------
 
 ### Data used for visualization
@@ -57,11 +60,6 @@ reactable(d,
   subject_category = colDef("Subject"),
   lineage = colDef("Lineage")
 ))
-
-
-```
-
-```{r}
 
 ```
 
@@ -85,7 +83,7 @@ valueBox(neverratify, icon = "fa-ban")
 ```
 
 
-### Years on average from signed to ratified 
+### Years, on average, from signed to ratified 
 
 ```{r echo = FALSE}
 meanyear = function(...) return(2.2)
@@ -94,15 +92,17 @@ valueBox(gapyear, icon = "fa-pause")
 
 ```
 
-
-
-
-
-Visualization {data-icon="fa-signal"}
+Concept {data-icon="fa-book"}
 =======================================
 
+What We Know (and Could Know) About International Environmental Agreements
+(Authors: Ronald B. Mitchell, Liliana B. Andonova, Mark Axelrod, Jörg Balsiger, Thomas Bernauer, Jessica F. Green, James Hollway, Rakhyun E. Kim, and Jean-Frédéric Mori
+Source: Global Environmental Politics 20:1, February 2020, https://doi.org/10.1162/glep_a_00544)
 
-### Chart A: Change in number of agreements over time
+Column {data-width=550}
+-----------------------------------------------------------------------
+
+### Change in number of agreements 1857 - 2016
 
 ```{r echo = FALSE}
 library(lubridate)
@@ -161,22 +161,88 @@ event <- tibble(date = lubridate::mdy(c("December 31, 1972")),
   theme_minimal() 
  # transition_reveal(tsig_yr) why this doesn't work?
 change_number
+
 ```
+
 
 Column {data-width=350}
 -----------------------------------------------------------------------
 
-### Chart B: Change in type of agreements over time
+
+### Number of agreement needs regular updating out of the total 1311 
+
+```{r echo = FALSE}
+gauge(264, min = 0, max = 1311, gaugeSectors(
+  success = c(41, 50), warning = c(21, 40), danger = c(0, 20)
+))
+```
+
+
+### Abtract
+
+Initiated in 2002, the International Environmental Agreements Data Base (IEADB) cata- logs the texts, memberships, and design features of over 3,000 multilateral and bilateral environmental agreements. Using IEADB data, we create a comprehensive review of the evolution of international environmental law, including how the number, subjects, and state memberships in IEAs have changed over time. By providing IEA texts, the IEADB helps scholars identify and systematically code IEA design features. We review scholar- ship derived from the IEADB on international environmental governance, including insights into IEA membership, formation, and design as well as the deeper structure of international environmental law. We note the IEADB’s value as a teaching tool to pro- mote undergraduate and graduate teaching and research. The IEADB’s structure and con- tent opens up both broad research realms and specific research questions, and facilitates the ability of scholars to use the IEADB to answer those questions of greatest interest to them.
+
+Source: What We Know (and Could Know) About International Environmental Agreements
+Authors: Ronald B. Mitchell, Liliana B. Andonova, Mark Axelrod, Jörg Balsiger, Thomas Bernauer, Jessica F. Green, James Hollway, Rakhyun E. Kim, and Jean-Frédéric Mori
+Source: Global Environmental Politics 20:1, February 2020, https://doi.org/10.1162/glep_a_00544)
+
+Visualization {data-icon="fa-signal"}
+=======================================
+
+Column {data-width=550}
+-----------------------------------------------------------------------
+
+### Top 15 lineages collectively account for about 0ne-third of the MEAs 
+
+
+```{r echo = FALSE}
+lng <- data %>% 
+  select(lineage, tsig_yr) %>% 
+  mutate(lineage = ifelse(lineage == "", "Other", lineage)) %>%
+  add_count(lineage) %>% 
+  arrange(desc(n)) 
+  # slice(1:10) want to get the first 10
+  # filter(n >14) 
+
+# top10 <- lng %>% 
+#   group_by(lineage) %>% 
+#   count() %>% 
+#   top_n(10, n)
+  
+total_lng <- lng %>% 
+summarise(total = sum(n))
+
+top15 <- lng %>% 
+filter(n >14) %>% # not the best way to get the top ones
+summarise(total = sum(n))
+
+
+lng %>% 
+  filter(n >14) %>%
+  ggplot(aes(fct_reorder(lineage, n), n)) +
+  geom_col(aes(fill = lineage)) +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    x = "",
+    y = "",
+    title = "Top 15 lineages of Multilateral Evironmental Agreement",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1).\n
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+    
+  ) +
+   guides(fill = FALSE)
+```
+
+> A lineages is defined as a set “of agreements, protocols, and amendments that modify, extend, replace, or explicitly derive from one or more original agreements (Mitchell 2003, 432).” 
+Source: Mitchell, Ronald B. 2003. International Environmental Agreements: A Survey of Their Fea- tures, Formation, and Effects. Annual Review of Environment and Resources 28: 429–461.
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Change in type of agreements over time
 
 ```{r echo = FALSE, fig.width=12, fig.height=10}
-
-bp_theme <- function(...) {
-  theme_minimal(...) +
-    theme(panel.grid.major.y = element_blank(), 
-          panel.grid.minor.x = element_blank(), 
-          panel.grid.major.x = element_line(color = "gray80"))
-          # plot.title.position = "plot") # "plot.title.position" is not a valid theme element name. 
-}
 
 d_at <- data %>% 
   select(tsig_yr, agreement_type) %>% 
@@ -201,11 +267,11 @@ d_at%>%
 http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
   guides(fill = FALSE, color = FALSE) +
-  theme_minimal() 
+  theme_minimal(base_size = 15) 
 
 ```
 
-### Chart C: Change in subject of agreements over time
+### Change in subject of agreements over time
 
 ```{r echo = FALSE, fig.width=12, fig.height=10}
 bf45 <- d %>% 
@@ -218,7 +284,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
             # nudge_y = -1,
             size = 2) +
   coord_flip() +
-  bp_theme(base_size = 10) +
+  theme_minimal(base_size = 15) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
@@ -252,7 +318,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
             # nudge_y = -2, # hard to get the right value. 
             size = 2) +
   coord_flip() +
-  bp_theme(base_size = 10) +
+  theme_minimal(base_size = 15) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
@@ -296,7 +362,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
             # nudge_y = -6,
             size = 2) +
   coord_flip() +
-  bp_theme(base_size = 10) +
+  theme_minimal(base_size = 15) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
@@ -339,7 +405,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
             # nudge_y = -1, 
             size = 2) +
   coord_flip() +
-  bp_theme(base_size = 10) +
+  theme_minimal(base_size = 15) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
@@ -353,28 +419,4 @@ bf45 + bt4570 + bt7000 + af2000
 ```
 
 
-Concepts {data-icon="fa-signal"}
-=======================================
-
-
-### Chart A
-
-```{r}
-
-
-```
-
-Column {data-width=350}
------------------------------------------------------------------------
-
-### Chart B
-
-```{r}
-
-```
-
-### Chart C
-
-```{r}
-
-```
+> International Environmental Agreements have become increasingly diverse in the subjects they address.
