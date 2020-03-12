@@ -21,6 +21,7 @@ library(gganimate)
 library(patchwork)
 library(ggridges)
 library(flexdashboard)
+library(plotly)
 ```
 
 Data  {data-icon="fa-table"}
@@ -138,15 +139,15 @@ event <- tibble(date = lubridate::mdy(c("December 31, 1972")),
   #             values_from = n
   #             )
   ggplot(aes(date, n)) +
-  geom_line(color = "gray40") +
+  geom_line(color = "gray40", size = .7) +
   # geom_line(data = filter(d, subject_category == "Species", 
   #                         aes(x = date, 
   #                         y = n))) + # why this doesn't work?
-  geom_line(data = species, color = "#C55644") +
+  geom_line(data = species, color = "#56B4E9", size = .7) +
   geom_line(data = pollution, color = "purple") +
   geom_vline(aes(xintercept = date), 
              data = event,
-             color = "gray40",
+             color = "#C55644",
              lty = "dashed") +
   geom_text(aes(x = date, y = 45, label = text),
             data = event,
@@ -156,11 +157,12 @@ event <- tibble(date = lubridate::mdy(c("December 31, 1972")),
     x = "",
     y = "Number of Agreements Signed",
     title = "Multilateral Environmental Agreements Signed between 1857 - 2016",
-    caption = "Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1). \n http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+    caption = "Data from Ronald B. Mitchell. 2002-2020 \n International Environmental Agreements Database Project (Version 2020.1). \n http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
+  scale_color_OkabeIto() +
   theme_minimal() 
  # transition_reveal(tsig_yr) why this doesn't work?
-change_number
+ggplotly(change_number)
 
 ```
 
@@ -192,14 +194,20 @@ Visualization {data-icon="fa-signal"}
 Column {data-width=550}
 -----------------------------------------------------------------------
 
-### Top 15 lineages collectively account for about 0ne-third of the MEAs 
+### Top 15 lineages collectively account for about one-third of the MEAs 
 
 
 ```{r echo = FALSE}
 lng <- data %>% 
   select(lineage, tsig_yr) %>% 
-  mutate(lineage = ifelse(lineage == "", "Other", lineage)) %>%
+  mutate(lineage = ifelse(lineage == "", "Other", lineage)) %>%  
+  mutate(lineage = ifelse(lineage == "MARPOL", "Prevention of Pollution from Ships", lineage)) %>% 
+  mutate(lineage = ifelse(lineage == "LRTAP", "Long-Range Transboundary Air Pollution", lineage)) %>%
+  mutate(lineage = ifelse(lineage == "CITES", "Trade in Endangered Species of Wild Fauna and Flora", lineage)) %>% 
+  mutate(lineage = ifelse(lineage == "MedPlan", "Mediterranean Action Plan", lineage)) %>% 
   add_count(lineage) %>% 
+  select(lineage, n) %>% 
+  count(lineage) %>% 
   arrange(desc(n)) 
   # slice(1:10) want to get the first 10
   # filter(n >14) 
@@ -220,18 +228,20 @@ summarise(total = sum(n))
 lng %>% 
   filter(n >14) %>%
   ggplot(aes(fct_reorder(lineage, n), n)) +
-  geom_col(aes(fill = lineage)) +
+  geom_col(aes(fill = lineage),
+           alpha = .7) +
   coord_flip() +
   theme_minimal() +
   labs(
     x = "",
-    y = "",
-    title = "Top 15 lineages of Multilateral Evironmental Agreement",
-    caption = "Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1).\n
+    y = "Number of Agreements",
+    title = "Top 15 lineages of Multilateral Evironmental Agreements",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1)
 Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
     
   ) +
-   guides(fill = FALSE)
+  scale_fill_viridis_d() + 
+  guides(fill = FALSE)
 ```
 
 > A lineages is defined as a set “of agreements, protocols, and amendments that modify, extend, replace, or explicitly derive from one or more original agreements (Mitchell 2003, 432).” 
@@ -267,7 +277,7 @@ d_at%>%
 http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
   guides(fill = FALSE, color = FALSE) +
-  theme_minimal(base_size = 15) 
+  theme_minimal(30) 
 
 ```
 
@@ -358,9 +368,9 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
            alpha = .5) +
   geom_col(data = newsubject70002,
            fill = "purple") +
-  geom_text(aes(subject_category, n, label = n),
-            # nudge_y = -6,
-            size = 2) +
+  # geom_text(aes(subject_category, n, label = n),
+  #           # nudge_y = -6,
+  #           size = 2) +
   coord_flip() +
   theme_minimal(base_size = 15) +
   guides(fill = FALSE, color = FALSE) +
