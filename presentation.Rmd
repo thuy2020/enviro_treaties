@@ -106,6 +106,7 @@ Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
   ) +
   theme_minimal() 
  # transition_reveal(tsig_yr) why this doesn't work?
+
 ```
 
     
@@ -204,7 +205,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
   geom_col(fill = "cornflowerblue") +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -1,
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +
@@ -237,7 +238,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
   scale_fill_OkabeIto() +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -2, # hard to get the right value. 
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +
@@ -281,7 +282,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
            fill = "purple") +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -6,
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +
@@ -322,7 +323,7 @@ ggplot(aes(fct_reorder(subject_category,n), n))+
            alpha = .5) +
   geom_text(aes(subject_category, n, label = n),
             # nudge_y = -1, 
-            size = 4) +
+            size = 2) +
   coord_flip() +
   bp_theme(base_size = 10) +
   guides(fill = FALSE, color = FALSE) +

@@ -1,12 +1,12 @@
 ---
-title: "Untitled"
+title: "Multilateral Evironmental Agreements 1857 - 2016"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: columns
+    orientation: rows
     vertical_layout: fill
 ---
 
-```{r setup, include=FALSE}
+```{r setup, echo = FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(rio)
 library(here)
@@ -24,56 +24,131 @@ library(flexdashboard)
 
 ```
 
+Data Tables {data-icon="fa-table"}
+=======================================
 
-Column {data-width=650}
------------------------------------------------------------------------
+### Raw Data
 
-### Chart A
+```{r echo = FALSE}
+data <- import(here("data", "iea_measonly.dta"))
+reactable(data)
 
-```{r data}
-data <- import(here("data", "iea_measonly.dta")) 
-d1 <- data %>% 
-  select(tsig_yr, teif_yr, subject_category, lineage) %>% 
-  arrange(tsig_yr) %>% 
-  gt() %>% 
+```
+
+### Subset of data used for visualization (Showing top 10 rows)
+
+```{r echo = FALSE}
+d <- data %>%
+  select(mitch_id, tsig_yr, teif_yr, subject_category, lineage)
+
+d_table <- d %>%
+  head(10) %>%
+  arrange(tsig_yr) %>%
+  gt() %>%
   cols_label(tsig_yr = "Year signed",
              teif_yr = "Year ratified",
-             subject_category = "Group type of treaty",
-             lineage = "Lineage") %>% 
-  tab_header(title = "Mutilateral Environmental Agreements 1857 - 2016") %>% 
-  tab_source_note(source_note = md("Data from [Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project](http://iea.uoregon.edu/)")) 
+             subject_category = "Subject",
+             lineage = "Lineage") %>%
+  tab_header(title = "Mutilateral Environmental Agreements 1857 - 2016") %>%
+  tab_source_note(source_note = md("Data from [Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project](http://iea.uoregon.edu/)"))
+d_table
+```
 
+Visualization {data-icon="fa-signal"}
+=======================================
 
+### Change in number of agreements over time
+```{r, echo = FALSE, fig.width=12}
+library(lubridate)
+species <- d %>% 
+  select(subject_category, tsig_yr) %>% 
+  filter(subject_category == "Species") %>% 
+  group_by(tsig_yr) %>% 
+  add_count() %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr))) 
+
+pollution <- d %>% 
+  select(subject_category, tsig_yr) %>% 
+  filter(subject_category == "Pollution") %>% 
+  group_by(tsig_yr) %>% 
+  add_count() %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr))) 
+
+d_num <- d %>% 
+  select(tsig_yr, subject_category) %>% 
+  group_by(tsig_yr) %>%
+  add_count()  %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr)))
+
+event <- tibble(date = lubridate::mdy(c("December 31, 1972")),
+                text = c("UN Conference on Human Environment"))
+
+ change_number <- d %>% 
+  group_by(tsig_yr) %>%
+  add_count()  %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr))) %>% 
+  # pivot_wider(names_from = subject_category, # doesn't work
+  #             values_from = n
+  #             )
+  ggplot(aes(date, n)) +
+  geom_line(color = "gray40") +
+  # geom_line(data = filter(d, subject_category == "Species", 
+  #                         aes(x = date, 
+  #                         y = n))) + # why this doesn't work?
+  geom_line(data = species, color = "#C55644") +
+  geom_line(data = pollution, color = "purple") +
+  geom_vline(aes(xintercept = date), 
+             data = event,
+             color = "gray40",
+             lty = "dashed") +
+  geom_text(aes(x = date, y = 45, label = text),
+            data = event,
+            color = "black",
+            nudge_x = 2) +
+  labs(
+    x = "",
+    y = "Number of Agreements Signed",
+    title = "Multilateral Environmental Agreements Signed between 1857 - 2016",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
+Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+  ) +
+  theme_minimal() 
+ # transition_reveal(tsig_yr) why this doesn't work?
+ 
+ change_number
 
 ```
 
-Column {data-width=350}
------------------------------------------------------------------------
 
-### Chart B
+### Consent to be bound
 
-```{r}
-# # Gauges
-# 1311 treaties
-# into force rate
-# terminated rate
+```{r echo = FALSE}
+gauge(448, min = 0, max = 1311, , gaugeSectors(
+  success = c(80, 100), warning = c(40, 79), danger = c(0, 39)
+))
+```
 
+### Regular updating needed
+
+```{r echo = FALSE}
+gauge(264, min = 0, max = 1311, gaugeSectors(
+  success = c(41, 50), warning = c(21, 40), danger = c(0, 20)
+))
 
 ```
+
+### Ratification rate
 
 ``` {r box}
-# Ratification
-
 dp3 <- data %>%
   select("subject_category", "tsig_yr", "teif_yr") %>%
   mutate(year_gap = teif_yr - tsig_yr) %>% 
   # filter(year_gap > 100)
   filter(year_gap < 100) %>% 
   group_by(year_gap) %>% # 349 year_gap = 0 
-  count() 
+  count() %>% 
   summary(avg_gap = mean(year_gap)) #???
 # mean 2.236
-  
   
   sameyear = function(...) return(349)
   meanyear = function(...) return(2.2)
@@ -87,7 +162,6 @@ dp3 <- data %>%
 
 ratifysameyear = sameyear()
 valueBox(ratifysameyear, icon = "fa-clock-o")
-
 
 ```
 
@@ -109,6 +183,10 @@ valueBox(neverratify, icon = "fa-ban")
 ```
 
 
+Column {data-width=350}
+-----------------------------------------------------------------------
+### Chart C
+
 ```{r data for Gauges }
 # Total
 nrow(data) #1311
@@ -118,13 +196,11 @@ data %>%
   group_by(eif_type1) %>% 
   count(eif_type1)
 
-
 # Politically adaptive 36
 data %>% 
   select(t_more_research, t_tap_clause1, region_type, dynamic, eif_type1) %>% 
   group_by(dynamic) %>% 
   count(dynamic)
-
 
 # Regular updating needed 264
 data %>% 
@@ -135,35 +211,4 @@ data %>%
 
 ```
 
-### Consent to be bound
-
-```{r}
-gauge(448, min = 0, max = 1311, , gaugeSectors(
-  success = c(80, 100), warning = c(40, 79), danger = c(0, 39)
-))
-```
-
-### Regular updating needed
-
-```{r}
-gauge(264, min = 0, max = 1311, gaugeSectors(
-  success = c(41, 50), warning = c(21, 40), danger = c(0, 20)
-))
-
-```
-
-### Politically adaptive 36
-
-```{r}
-gauge(36, min = 0, max = 1311, gaugeSectors(
-  success = c(0, 2), warning = c(3, 6), danger = c(7, 10)
-))
-```
-
-
-### Chart C
-
-```{r}
-
-```
 
