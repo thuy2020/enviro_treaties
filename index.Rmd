@@ -9,7 +9,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(rio)
-library(here)
 library(tidyverse)
 library(ggplot2)
 library(gghighlight)
@@ -22,6 +21,7 @@ library(patchwork)
 library(ggridges)
 library(flexdashboard)
 library(plotly)
+library(lubridate)
 ```
 
 Data  {data-icon="fa-table"}
@@ -30,11 +30,10 @@ Data  {data-icon="fa-table"}
 Column {data-width=550}
 -----------------------------------------------------------------------
 
-### Original Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1).\n
-Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+### Original Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1). Available at: http://iea.uoregon.edu/
 
 ```{r echo = FALSE}
-data <- import(here("data", "iea_measonly.dta"))
+data <- import(here::here("data", "iea_measonly.dta"))
 reactable(data, 
           defaultSortOrder = "desc",
           filterable = TRUE, minRows = 10)
@@ -70,7 +69,7 @@ reactable(d,
 ```{r echo = FALSE}
 sameyear = function(...) return(349)
 ratifysameyear = sameyear()
-valueBox(ratifysameyear, icon = "fa-clock-o")
+valueBox(ratifysameyear, icon = "fa-clock-o") # change color 
 
 ```
 
@@ -84,7 +83,7 @@ valueBox(neverratify, icon = "fa-ban")
 ```
 
 
-### Years, on average, from signed to ratified 
+### Years taken, on average, from signature to ratification 
 
 ```{r echo = FALSE}
 meanyear = function(...) return(2.2)
@@ -100,19 +99,17 @@ What We Know (and Could Know) About International Environmental Agreements
 (Authors: Ronald B. Mitchell, Liliana B. Andonova, Mark Axelrod, Jörg Balsiger, Thomas Bernauer, Jessica F. Green, James Hollway, Rakhyun E. Kim, and Jean-Frédéric Mori
 Source: Global Environmental Politics 20:1, February 2020, https://doi.org/10.1162/glep_a_00544)
 
-Column {data-width=550}
+Column {data-width=600}
 -----------------------------------------------------------------------
 
 ### Change in number of agreements 1857 - 2016
 
 ```{r echo = FALSE}
-library(lubridate)
-species <- d %>% 
-  select(subject_category, tsig_yr) %>% 
-  filter(subject_category == "Species") %>% 
-  group_by(tsig_yr) %>% 
-  add_count() %>% 
-  mutate(date = mdy(paste0("01-01-", tsig_yr))) 
+total <- d %>% 
+  select(tsig_yr, subject_category) %>% 
+  group_by(tsig_yr) %>%
+  add_count()  %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr)))
 
 pollution <- d %>% 
   select(subject_category, tsig_yr) %>% 
@@ -121,48 +118,61 @@ pollution <- d %>%
   add_count() %>% 
   mutate(date = mdy(paste0("01-01-", tsig_yr))) 
 
-d_num <- d %>% 
-  select(tsig_yr, subject_category) %>% 
-  group_by(tsig_yr) %>%
-  add_count()  %>% 
-  mutate(date = mdy(paste0("01-01-", tsig_yr)))
-
-event <- tibble(date = lubridate::mdy(c("December 31, 1972")),
-                text = c("UN Conference on Human Environment"))
+species <- d %>% 
+  select(subject_category, tsig_yr) %>% 
+  filter(subject_category == "Species") %>% 
+  group_by(tsig_yr) %>% 
+  add_count() %>% 
+  mutate(date = mdy(paste0("01-01-", tsig_yr))) 
 
 
- change_number <- d %>% 
-  group_by(tsig_yr) %>%
+threelines <- bind_rows(total, pollution, species, .id = "dataset") %>% 
+  mutate(dataset = ifelse(dataset == "1", "Total", dataset)) %>% 
+  mutate(dataset = ifelse(dataset == "2", "Pollution", dataset)) %>% 
+  mutate(dataset = ifelse(dataset == "3", "Species", dataset)) 
+
+
+event1 <- tibble(date = lubridate::mdy(c("December 31, 1972")),
+                text = c("UN Human \n Environment"))
+
+event2 <- tibble(date = lubridate::mdy(c("December 31, 1992")),
+                text = c("UN Environment \n and Development"))
+
+ change_number <- threelines %>% 
+  group_by(tsig_yr, dataset) %>%
   add_count()  %>% 
   mutate(date = mdy(paste0("01-01-", tsig_yr))) %>% 
-  # pivot_wider(names_from = subject_category, # doesn't work
-  #             values_from = n
-  #             )
   ggplot(aes(date, n)) +
-  geom_line(color = "gray40", size = .7) +
-  # geom_line(data = filter(d, subject_category == "Species", 
-  #                         aes(x = date, 
-  #                         y = n))) + # why this doesn't work?
-  geom_line(data = species, color = "#56B4E9", size = .7) +
-  geom_line(data = pollution, color = "purple") +
+  geom_line(aes(color = dataset)) +
   geom_vline(aes(xintercept = date), 
-             data = event,
+             data = event1,
              color = "#C55644",
              lty = "dashed") +
   geom_text(aes(x = date, y = 45, label = text),
-            data = event,
+            data = event1,
             color = "black",
             nudge_x = 2) +
+  geom_vline(aes(xintercept = date), 
+             data = event2,
+             color = "#C55644",
+             lty = "dashed") +
+  geom_text(aes(x = date, y = 35, label = text),
+            data = event2,
+            color = "black",
+            nudge_x = 2) + 
+  scale_y_continuous(expand = c(0, 0)) +
   labs(
     x = "",
     y = "Number of Agreements Signed",
-    title = "Multilateral Environmental Agreements Signed between 1857 - 2016",
-    caption = "Data from Ronald B. Mitchell. 2002-2020 \n International Environmental Agreements Database Project (Version 2020.1). \n http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+    title = "Multilateral Environmental Agreements Signed \n 1857 - 2016",
+    caption = "Data from Ronald B. Mitchell. 2002-2020 \n International Environmental Agreements Database Project (Version 2020.1). \n http://iea.uoregon.edu/ ",
+    color = "Agreement \n category"
   ) +
   scale_color_OkabeIto() +
-  theme_minimal() 
- # transition_reveal(tsig_yr) why this doesn't work?
-ggplotly(change_number)
+  theme_minimal() +
+  theme(legend.position = c(.3, .7))
+change_number
+#ggplotly(change_number)
 
 ```
 
@@ -170,15 +180,21 @@ ggplotly(change_number)
 Column {data-width=350}
 -----------------------------------------------------------------------
 
-
-### Number of agreement needs regular updating out of the total 1311 
+### Consent to be bound
 
 ```{r echo = FALSE}
-gauge(264, min = 0, max = 1311, gaugeSectors(
+gauge(448, min = 0, max = 1311, gaugeSectors(
   success = c(41, 50), warning = c(21, 40), danger = c(0, 20)
 ))
 ```
 
+### Regular update needed 
+
+```{r echo = FALSE}
+gauge(264, min = 0, max = 1311, gaugeSectors(
+  success = c(80, 100), warning = c(40, 79), danger = c(0, 39)
+))
+```
 
 ### Abtract
 
@@ -191,10 +207,10 @@ Source: Global Environmental Politics 20:1, February 2020, https://doi.org/10.11
 Visualization {data-icon="fa-signal"}
 =======================================
 
-Column {data-width=550}
+Column {data-width=500}
 -----------------------------------------------------------------------
 
-### Top 15 lineages collectively account for about one-third of the MEAs 
+### Top 15 lineages collectively account for about one-third of the total Multilateral Evironmental Agreements 
 
 
 ```{r echo = FALSE}
@@ -203,41 +219,35 @@ lng <- data %>%
   mutate(lineage = ifelse(lineage == "", "Other", lineage)) %>%  
   mutate(lineage = ifelse(lineage == "MARPOL", "Prevention of Pollution from Ships", lineage)) %>% 
   mutate(lineage = ifelse(lineage == "LRTAP", "Long-Range Transboundary Air Pollution", lineage)) %>%
-  mutate(lineage = ifelse(lineage == "CITES", "Trade in Endangered Species of Wild Fauna and Flora", lineage)) %>% 
+  mutate(lineage = ifelse(lineage == "CITES", "Trade in Endangered Species", lineage)) %>% 
   mutate(lineage = ifelse(lineage == "MedPlan", "Mediterranean Action Plan", lineage)) %>% 
   add_count(lineage) %>% 
   select(lineage, n) %>% 
   count(lineage) %>% 
   arrange(desc(n)) 
-  # slice(1:10) want to get the first 10
-  # filter(n >14) 
 
-# top10 <- lng %>% 
-#   group_by(lineage) %>% 
-#   count() %>% 
-#   top_n(10, n)
+top15 <- lng %>%
+  top_n(15, n)
+
+bottom10 <- lng %>% 
+  top_n(-10,n)
   
 total_lng <- lng %>% 
 summarise(total = sum(n))
 
-top15 <- lng %>% 
-filter(n >14) %>% # not the best way to get the top ones
-summarise(total = sum(n))
-
-
-lng %>% 
-  filter(n >14) %>%
+top15 %>% 
   ggplot(aes(fct_reorder(lineage, n), n)) +
   geom_col(aes(fill = lineage),
            alpha = .7) +
   coord_flip() +
+  scale_y_continuous(expand = c(0, 0)) +
   theme_minimal() +
   labs(
     x = "",
     y = "Number of Agreements",
-    title = "Top 15 lineages of Multilateral Evironmental Agreements",
+    title = "Top 15 lineages",
     caption = "Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1)
-Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+http://iea.uoregon.edu/ "
     
   ) +
   scale_fill_viridis_d() + 
@@ -247,12 +257,12 @@ Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
 > A lineages is defined as a set “of agreements, protocols, and amendments that modify, extend, replace, or explicitly derive from one or more original agreements (Mitchell 2003, 432).” 
 Source: Mitchell, Ronald B. 2003. International Environmental Agreements: A Survey of Their Fea- tures, Formation, and Effects. Annual Review of Environment and Resources 28: 429–461.
 
-Column {data-width=350}
+Column {data-width=550}
 -----------------------------------------------------------------------
 
 ### Change in type of agreements over time
 
-```{r echo = FALSE, fig.width=12, fig.height=10}
+```{r echo = FALSE, fig.width = 18, fig.height=10}
 
 d_at <- data %>% 
   select(tsig_yr, agreement_type) %>% 
@@ -272,161 +282,68 @@ d_at%>%
    labs(
     x = "",
     y = "Number of Agreements Signed",
-    title = "Environmental Agreements Signed by Type between 1857 - 2016",
-    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
-http://iea.uoregon.edu/ Date accessed: 26 February 2020"
+    title = "Multilateral Environmental Agreements by Type",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1).
+http://iea.uoregon.edu/ "
   ) +
   guides(fill = FALSE, color = FALSE) +
   theme_minimal(30) 
 
 ```
 
-### Change in subject of agreements over time
 
-```{r echo = FALSE, fig.width=12, fig.height=10}
+### Agreements have become increasingly diverse in the subjects address overtime
+
+```{r echo = FALSE, fig.width = 18, fig.height=10}
 bf45 <- d %>% 
   filter(tsig_yr < 1945) %>% 
-group_by(subject_category) %>% 
+  group_by(subject_category) %>% 
   count(subject_category) %>% 
-ggplot(aes(fct_reorder(subject_category,n), n))+
+  ggplot(aes(fct_reorder(subject_category,n), n))+
   geom_col(fill = "cornflowerblue") +
-  geom_text(aes(subject_category, n, label = n),
-            # nudge_y = -1,
-            size = 2) +
   coord_flip() +
-  theme_minimal(base_size = 15) +
-  guides(fill = FALSE, color = FALSE) +
-  labs(
-    x = "",
-    y = "",
-    title = "Number of Agreements by Subject \n
-    Before 1945"
-  )
-
-# highlight new subjects in this period
-newsubject4570 <- d %>% 
-  filter(tsig_yr > 1944 &
-          tsig_yr < 1972) %>%
-  filter(subject_category == "Ocean" | 
-         subject_category == "General" |
-         subject_category == "Habitat") %>% 
-  group_by(subject_category) %>% 
-  count(subject_category)
-
-bt4570 <- d %>% 
-  filter(tsig_yr > 1944 &
-          tsig_yr < 1972) %>% 
-  group_by(subject_category) %>% 
-  count(subject_category) %>% 
-ggplot(aes(fct_reorder(subject_category,n), n))+
-  geom_col(fill = "cornflowerblue", 
-           alpha = .5) +
-  geom_col(data = newsubject4570,
-           fill = "#C55644") +
   scale_fill_OkabeIto() +
-  geom_text(aes(subject_category, n, label = n),
-            # nudge_y = -2, # hard to get the right value. 
-            size = 2) +
-  coord_flip() +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 30) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
     y = "",
-    title = "Between 1945 - 1972"
-  ) 
-
-
-newsubject70001 <- d %>% 
-  filter(tsig_yr > 1971 &
-        tsig_yr < 2000) %>% 
-  filter(subject_category == "Ocean" | 
-         subject_category == "General" |
-         subject_category == "Habitat") %>% 
-  group_by(subject_category) %>% 
-  count(subject_category)
-
-newsubject70002 <- d %>% 
-  filter(tsig_yr > 1971 &
-        tsig_yr < 2000) %>% 
-  mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>%
-  filter(subject_category == "Other") %>% 
-  group_by(subject_category) %>% 
-  count(subject_category)
-
-bt7000 <- d %>%  
-  filter(tsig_yr > 1971 &
-        tsig_yr < 2000) %>% 
-  mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>% 
-  group_by(subject_category) %>% 
-  count(subject_category)  %>% 
-ggplot(aes(fct_reorder(subject_category,n), n))+
-  geom_col(fill = "cornflowerblue",
-           alpha = .5) +
-  geom_col(data = newsubject70001,  
-           fill = "#C55644",
-           alpha = .5) +
-  geom_col(data = newsubject70002,
-           fill = "purple") +
-  # geom_text(aes(subject_category, n, label = n),
-  #           # nudge_y = -6,
-  #           size = 2) +
-  coord_flip() +
-  theme_minimal(base_size = 15) +
-  guides(fill = FALSE, color = FALSE) +
-  labs(
-    x = "",
-    y = "",
-    title = "Between 1972 - 2000"
+    title = "1857 - 1944"
   )
 
-newsubject20001 <- d %>% 
-  filter(tsig_yr > 1999) %>% 
+newsubject <- d %>% 
+  filter(tsig_yr > 1944) %>%
+  mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>%
   filter(subject_category == "Ocean" | 
          subject_category == "General" |
-         subject_category == "Habitat") %>% 
+         subject_category == "Habitat"|
+         subject_category == "Other") %>% 
   group_by(subject_category) %>% 
   count(subject_category)
 
-newsubject20002 <- d %>% 
-  filter(tsig_yr > 1999) %>% 
+
+from45 <- d %>% 
+  filter(tsig_yr > 1944) %>% 
   mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>%
-  filter(subject_category == "Other") %>% 
   group_by(subject_category) %>% 
-  count(subject_category)
-
-
-
-af2000 <- d %>% 
-  filter(tsig_yr > 1999) %>% 
-  mutate(subject_category = ifelse(subject_category == "", "Other", subject_category)) %>% 
-  group_by(subject_category) %>% 
-  count(subject_category) %>% 
-ggplot(aes(fct_reorder(subject_category,n), n))+
+  count(subject_category) %>%
+  ggplot(aes(fct_reorder(subject_category,n), n))+
   geom_col(fill = "cornflowerblue", 
            alpha = .5) +
-  geom_col(data = newsubject20001,
+  geom_col(data = newsubject,
            fill = "#C55644",
-           alpha = .5) +
-  geom_col(data = newsubject20002,
-           fill = "purple",
-           alpha = .5) +
-  geom_text(aes(subject_category, n, label = n),
-            # nudge_y = -1, 
-            size = 2) +
+           alpha = .8) +
   coord_flip() +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 30) +
   guides(fill = FALSE, color = FALSE) +
   labs(
     x = "",
     y = "",
-    title = "After 2000", 
-    caption = "Data from Ronald B. Mitchell. 2002-2020. International Environmental Agreements Database Project (Version 2020.1).
-Available at: http://iea.uoregon.edu/ Date accessed: 26 February 2020"
-  ) 
-  
-bf45 + bt4570 + bt7000 + af2000
+    title = "1945 - 2016",
+    caption = "Data from Ronald B. Mitchell. 2002-2020. \n International Environmental Agreements Database Project (Version 2020.1).
+http://iea.uoregon.edu/ "
+  )
+
+bf45 + from45
 ```
 
-
-> International Environmental Agreements have become increasingly diverse in the subjects they address.
