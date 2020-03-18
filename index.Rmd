@@ -2,6 +2,7 @@
 title: "Multilateral Evironmental Agreements 1857 - 2016"
 output: 
   flexdashboard::flex_dashboard:
+    css: custom.css
     orientation: columns
     vertical_layout: fill
 ---
@@ -172,6 +173,12 @@ event2 <- tibble(date = lubridate::mdy(c("December 31, 1992")),
   theme_minimal() +
   theme(legend.position = c(.3, .7))
 change_number
+
+
+# library(dygraphs)
+# dygraph(change_number) %>% 
+#   dyRangeSelector(dateWindow = c("1957-01-01", "2016-01-01"))
+
 #ggplotly(change_number)
 
 ```
